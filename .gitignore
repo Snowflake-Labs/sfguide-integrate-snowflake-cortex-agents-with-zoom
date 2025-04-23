@@ -1,0 +1,11 @@
+.DS_Store
+rsa_key.p8
+rsa_key.pub
+zoomenv
+zoomenv/bin
+zoomenv/include
+zoomenv/lib
+.env
+__pycache__
+
+setup.txt

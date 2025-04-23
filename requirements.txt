@@ -1,0 +1,10 @@
+flask
+snowflake
+requests
+pandas
+numpy
+python-dotenv
+
+
+
+
