@@ -8,6 +8,7 @@ DEBUG = False
 class CortexChat:
     def __init__(self, 
             agent_url: str, 
+            inference_url: str,
             search_services: list, 
             semantic_models: list,
             model: str, 
@@ -16,6 +17,7 @@ class CortexChat:
             private_key_path: str
         ):
         self.agent_url = agent_url
+        self.inference_url = inference_url
         self.model = model
         self.search_service = search_services[0]
         self.support_semantic_model = semantic_models[0]
@@ -26,7 +28,7 @@ class CortexChat:
         self.jwt = JWTGenerator(self.account, self.user, self.private_key_path).get_token()
 
     def data_to_answer(self, df: str) -> str:
-        url = 'https://sfdevrel-sfdevrel-enterprise.snowflakecomputing.com/api/v2/cortex/inference:complete'
+        url = self.inference_url
         headers = {
             'X-Snowflake-Authorization-Token-Type': 'KEYPAIR_JWT',
             'Content-Type': 'application/json',
@@ -58,6 +60,7 @@ class CortexChat:
                 if line:
                     result = self._process_sse_line(line.decode('utf-8'))
                     if result is not None:
+                        # sample payload for reference
                         # {'type': 'other', 'data': {'id': '52745409-b9c9-4033-a41d-17bcced7c11a', 'model': 'claude-3-5-sonnet', 
                         # 'choices': [{'delta': {'type': 'text', 'content': 'd significantly more support tickets than Business Internet services,', 
                         # 'content_list': [{'type': 'text', 'text': 'd significantly more support tickets than Business Internet services,'}], 
@@ -143,7 +146,7 @@ class CortexChat:
             return self._parse_response(response)
         else:
             print(f"Error: Received status code {response.status_code} with message {response.json()}")
-            return None
+            return {'type': 'error', 'text': f'Error: Received status code {response.status_code} with message {response.json()}'}
 
     def _parse_delta_content(self,content: list) -> dict[str, any]:
         """Parse different types of content from the delta."""
@@ -183,7 +186,7 @@ class CortexChat:
                     }
             return {'type': 'other', 'data': data}
         except json.JSONDecodeError:
-            return {'type': 'error', 'message': f'Failed to parse: {line}'}
+            return {'type': 'error', 'text': f'Failed to parse: {line}'}
     
     def _parse_response(self,response: requests.Response) -> dict[str, any]:
         """Parse and print the SSE chat response with improved organization."""

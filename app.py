@@ -11,10 +11,11 @@ import json
 load_dotenv()
 
 # Environment variables
-ACCOUNT = os.getenv("ACCOUNT")
-USER = os.getenv("DEMO_USER")
+SNOWFLAKE_ACCOUNT = os.getenv("SNOWFLAKE_ACCOUNT")
+SNOWFLAKE_DEMO_USER = os.getenv("SNOWFLAKE_DEMO_USER")
 RSA_PRIVATE_KEY_PATH = os.getenv("RSA_PRIVATE_KEY_PATH")
-AGENT_ENDPOINT = os.getenv("AGENT_ENDPOINT")
+SNOWFLAKE_AGENT_ENDPOINT = os.getenv("SNOWFLAKE_AGENT_ENDPOINT")
+SNOWFLAKE_INFERENCE_ENDPOINT = os.getenv("SNOWFLAKE_INFERENCE_ENDPOINT")
 SUPPORT_SEMANTIC_MODEL = os.getenv("SUPPORT_SEMANTIC_MODEL")
 SUPPLY_CHAIN_SEMANTIC_MODEL = os.getenv("SUPPLY_CHAIN_SEMANTIC_MODEL")
 VEHICLE_SEARCH_SERVICE = os.getenv("VEHICLE_SEARCH_SERVICE")
@@ -96,6 +97,7 @@ def send_chat_message(user_jid, to_jid, message):
 
     return response.status_code, response.json()
 
+# Route that Zoom will use for OAuth
 @app.route('/', methods=['GET'])
 def oauth_redirect():
     code = request.args.get('code')
@@ -116,7 +118,7 @@ def oauth_redirect():
 
     return redirect(f"https://zoom.us/launch/chat?jid={ZOOM_BOT_JID}")
 
-# Route that Zoom Chat will POST to
+# Route that Zoom will POST to
 @app.route('/askcortex', methods=['POST'])
 def zoom_chat():
     data = request.get_json()
@@ -124,7 +126,7 @@ def zoom_chat():
     to_jid = data.get('payload', {}).get('toJid')
     prompt = data.get('payload', {}).get('cmd', '').strip()
 
-    # sample request payload
+    # sample request payload for reference
     # {'event': 'bot_notification', 'payload': {'accountId': '2jy0Dr6nQTyxxxxxxxxxxxx', 'channelName': 'DZoom', 'cmd': 'hello', 
     # 'robotJid': 'v1fsgsvqogqXXXXXXXXXX@xmpp.zoom.us', 'timestamp': 1745344684085, 
     # 'toJid': '_e-fkvtft9XXXXXXXXXX@xmpp.zoom.us', 'triggerId': 'DbU0DiotTxxxxxxxx', 
@@ -134,7 +136,7 @@ def zoom_chat():
 
     agent_response = parse_agent_response(CORTEX_APP.chat(prompt))
 
-    # Send Snowflake Cortex response to Zoom Chat
+    # Send Snowflake Cortex AI response to Zoom
     send_status, zoom_response = send_chat_message(user_jid, to_jid, agent_response)
     return jsonify({"status": send_status, "response": zoom_response})
 
@@ -142,47 +144,50 @@ def parse_agent_response(content):
     try:
         if DEBUG:
             print(content)
-
-        if content.get('sql'):
-            sql = content['sql']
-            interpreted_question = content['text']
-            df = pd.read_sql(sql, CONN)
-            data2answer = CORTEX_APP.data_to_answer(df.to_string())
-            if DEBUG:
-                print(df.to_string())
-                print(f"{interpreted_question} \n\nAnswer: {data2answer['text']}")
-            return data2answer['text']
-        elif content.get('text'):
-            answer = content['text']
-            citations = content.get('citations','N/A')
-            return answer + "\n\n* Citation(s): " + citations
+        if content.get('type') == 'error':
+            return content.get('text')
         else:
-            answer = 'Sorry, no response available! Please try asking another question.'
-            return answer         
+            if content.get('sql'):
+                sql = content['sql']
+                interpreted_question = content['text']
+                df = pd.read_sql(sql, CONN)
+                data2answer = CORTEX_APP.data_to_answer(df.to_string())
+                if DEBUG:
+                    print(df.to_string())
+                    print(f"{interpreted_question} \n\nAnswer: {data2answer['text']}")
+                return data2answer['text']
+            elif content.get('text') and ("I don't know the answer to that question.*" not in content.get('text')):
+                answer = content['text']
+                citations = content.get('citations','N/A')
+                return answer + "\n\n* Citation(s): " + citations
+            else:
+                answer = 'Sorry, no response(s) available! Please try asking another question.'
+                return answer         
     except Exception as e:
-        print(f"Error processing agent response: {str(e)}")
+        print(f"Error encountered an error: {str(e)}")
         return f"Sorry, encountered an error: {str(e)}."
 
 # Initialize Snowflake and Cortex
 def init():
     conn = snowflake.connector.connect(
-        user=USER,
+        user=SNOWFLAKE_DEMO_USER,
         authenticator="SNOWFLAKE_JWT",
         private_key_file=RSA_PRIVATE_KEY_PATH,
-        account=ACCOUNT
+        account=SNOWFLAKE_ACCOUNT
     )
 
     if not conn.rest.token:
-        print("[ERROR] Snowflake connection failed.")
+        print("[ERROR] Snowflake connection failed. Please check SNOWFLAKE_DEMO_USER, RSA_PRIVATE_KEY_PATH, and SNOWFLAKE_ACCOUNT are set correctly in your .env file.")
         exit
 
     cortex_app = cortex_chat.CortexChat(
-        AGENT_ENDPOINT,
+        SNOWFLAKE_AGENT_ENDPOINT,
+        SNOWFLAKE_INFERENCE_ENDPOINT,
         SEARCH_SERVICES,
         SEMANTIC_MODELS,
         MODEL,
-        ACCOUNT,
-        USER,
+        SNOWFLAKE_ACCOUNT,
+        SNOWFLAKE_DEMO_USER,
         RSA_PRIVATE_KEY_PATH
     )
 
