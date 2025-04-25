@@ -6,4 +6,4 @@ Cortex Agents simplify AI-powered data interactions via a REST API, combining hy
 
 ## Step-by-Step Guide
 
-For prerequisites, environment setup, step-by-step guide and instructions, please refer to the [QuickStart Guide](https://quickstarts.snowflake.com/guide/integrate_snowflake_cortex_agents_with_slack/index.html).
+For prerequisites, environment setup, step-by-step guide and instructions, please refer to the [QuickStart Guide](https://quickstarts.snowflake.com/guide/integrate-snowflake-cortex-agents-with-zoom/index.html).
