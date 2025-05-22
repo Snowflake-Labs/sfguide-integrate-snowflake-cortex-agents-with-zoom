@@ -61,7 +61,7 @@ class CortexChat:
                     result = self._process_sse_line(line.decode('utf-8'))
                     if result is not None:
                         # sample payload for reference
-                        # {'type': 'other', 'data': {'id': '52745409-b9c9-4033-a41d-17bcced7c11a', 'model': 'claude-3-5-sonnet', 
+                        # {'type': 'other', 'data': {'id': '52745409-b9c9-4033-a41d-17bcced7c11a', 'model': 'claude-4-sonnet', 
                         # 'choices': [{'delta': {'type': 'text', 'content': 'd significantly more support tickets than Business Internet services,', 
                         # 'content_list': [{'type': 'text', 'text': 'd significantly more support tickets than Business Internet services,'}], 
                         # 'text': 'd significantly more support tickets than Business Internet services,'}}], 'usage': {}}}
